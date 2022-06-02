@@ -1,3 +1,12 @@
+import fs from 'fs/promises'
+
 export const remove = async () => {
-    // Write your code here 
+    fs.unlink('./files/fileToRemove.txt')
+        .then(() => {
+            console.log('File deleted successfully');
+        })
+        .catch(() => {
+            throw new Error('FS operation failed');
+        })
 };
+remove();
