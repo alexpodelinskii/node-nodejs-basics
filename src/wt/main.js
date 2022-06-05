@@ -1,54 +1,29 @@
 import os from 'os';
-import { EventEmitter } from 'events';
 import { Worker } from 'worker_threads';
-import path from 'path';
 
 export const performCalculations = async () => {
-    const workers = new Thread('./worker.js');
-    workers.run(10);
-    workers.on('completed', data => console.log(data));
+    const resultsArr = [];
+    const cpusCount = os.cpus().length;
+    const promises = [];
+
+    for (let i = 0; i < cpusCount; i++) {
+        promises.push(worker(i))
+    }
+    await Promise.all(promises).then(results => results.forEach(res => resultsArr.push(res)));
+    return resultsArr;
 };
 
-class Thread extends EventEmitter {
-    workers = [];
-    resultsArr = [];
+const worker = (index) => new Promise((resolve) => {
+    const worker = new Worker('./worker.js', { workerData: 10 + index });
 
-    constructor(file) {
-        super();
-        this.file = file;
-        this.start(os.cpus().length);
-    }
+    worker.on('message', msg => {
+        resolve({ status: 'resolve', data: msg });
+    });
 
-    start(countTreads) {
-        for (let i = 0; i < countTreads; i++) {
-            const worker = new Worker(path.resolve(this.file));
-            worker.on('message', data => this.addResult(i, 'resolved', data));
-            worker.on('error', () => this.addResult(i, 'error', null));
-            this.workers.push(worker);
-        }
-    }
+    worker.on('error', err => {
+        resolve({ status: 'error', data: null });
+    });
 
-    run(startNumber) {
-        this.workers.forEach((worker, i) => worker.postMessage(startNumber + i));
-        return this;
-    }
+});
 
-    addResult(number, status = 'resolved', data) {
-        this.resultsArr.push({ status, data });
-
-        if (this.resultsArr.length === this.workers.length) {
-            const result = this.resultsArr
-                .sort((a, b) => a.data - b.data);
-            this.emit('completed', result);
-            this.abortWorkers();
-        }
-    }
-
-    abortWorkers() {
-        this.workers.forEach(worker => worker.terminate());
-    }
-}
-
-
-
-performCalculations();
+console.log(await performCalculations());

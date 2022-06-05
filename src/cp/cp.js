@@ -6,7 +6,7 @@ export const spawnChildProcess = async () => {
     const cp = spawn('node ', ['./files/script.js', ...args], { shell: true });
 
     cp.stdout.on('data', data => {
-        console.log(data.toString().trim());
+        console.log(data.toString());
     });
     process.stdin.on('data', data => {
         cp.stdin.write(data);
